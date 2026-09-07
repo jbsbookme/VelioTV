@@ -1,0 +1,60 @@
+name: VelioTV ARM64 APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+
+    strategy:
+      matrix:
+        platform: [android-arm64]
+        config: [qa]
+
+    env:
+      DEPOT_TOOLS_UPDATE: 0
+      DEPOT_TOOLS_REPORT_BUILD: 0
+      DEPOT_TOOLS_COLLECT_METRICS: 0
+      DEPOT_TOOLS_METRICS: 0
+
+    steps:
+      - name: Checkout CI files
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Prepare source checkout
+        uses: ./.github/actions/checkout
+        with:
+          path: cobalt/src
+          ref: ${{ github.sha }}
+          fetch_depth: 1
+          use_cache: false
+
+      - name: Set up depot_tools and sync dependencies
+        uses: ./.github/actions/depot_tools
+        with:
+          use_cache: false
+          use_gcloud: false
+          run_sync: true
+
+      - name: Generate ARM64 QA build
+        run: |
+          cd cobalt/src
+          cobalt/build/gn.py -p android-arm64 -C qa --no-rbe
+
+      - name: Build VelioTV APK
+        run: |
+          cd cobalt/src
+          autoninja -C out/android-arm64_qa cobalt:gn_all
+
+      - name: Upload VelioTV APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: VelioTV-ARM64-APK
+          path: |
+            cobalt/src/out/android-arm64_qa/apks/*.apk
+            cobalt/src/out/android-arm64_qa/*_apk/*.apk
+            cobalt/src/out/android-arm64_qa/gen/build_info.json
