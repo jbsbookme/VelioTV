@@ -42,8 +42,23 @@ jobs:
 
       - name: Create debug keystore
         run: |
-          mkdir -p "cobalt/.android"
-          keytool -genkeypair             -keystore "cobalt/.android/debug.keystore"             -storepass android             -alias androiddebugkey             -keypass android             -keyalg RSA             -keysize 2048             -validity 10000             -dname "CN=Android Debug,O=Android,C=US"
+          # GN android_apk keystore_path in cobalt/android/BUILD.gn is
+          # "../../../../.android/debug.keystore" (relative to //cobalt/android),
+          # which resolves to $GITHUB_WORKSPACE/.android/debug.keystore.
+          # Prior attempts ($HOME, cobalt/src, cobalt/) all failed CI with:
+          #   missing ../../../../.android/debug.keystore needed by apks/Cobalt.apk
+          mkdir -p "${GITHUB_WORKSPACE}/.android"
+          keytool -genkeypair \
+            -keystore "${GITHUB_WORKSPACE}/.android/debug.keystore" \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+          test -f "${GITHUB_WORKSPACE}/.android/debug.keystore"
+          ls -la "${GITHUB_WORKSPACE}/.android/debug.keystore"
 
       - name: Generate ARM64 QA build
         run: |
